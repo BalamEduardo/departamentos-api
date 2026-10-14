@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes | Apartamentos Blue</title>
+    <style>
+        :root { font-family: Arial, sans-serif; color: #203047; background: #f4f7fb; } * { box-sizing: border-box; } body { margin: 0; }
+        header { background: #fff; border-bottom: 1px solid #dce4ee; } .topbar, main { max-width: 1050px; margin: auto; padding: 18px 22px; } .topbar { font-weight: 700; color: #1e4f91; }
+        nav { display: flex; gap: 15px; flex-wrap: wrap; padding-top: 0; } nav a { color: #315c8e; text-decoration: none; } main { padding-top: 28px; }
+        h1 { margin: 0 0 8px; } .intro, .muted { color: #65748b; } .panel { background: #fff; border: 1px solid #dce4ee; border-radius: 12px; padding: 20px; margin-top: 18px; box-shadow: 0 4px 15px #1c35520a; }
+        .filter { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; } .field { display: grid; gap: 5px; } label { font-size: 14px; font-weight: 600; } input, button { font: inherit; }
+        input { border: 1px solid #cbd6e3; border-radius: 7px; padding: 9px 10px; background: white; } button { border: 0; border-radius: 7px; background: #2463a6; color: white; padding: 9px 13px; cursor: pointer; }
+        .total { color: #17633a; font-size: 24px; font-weight: 700; margin: 12px 0; } .table-wrap { overflow-x: auto; } table { width: 100%; border-collapse: collapse; min-width: 580px; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e4eaf1; vertical-align: top; } th { color: #63738a; font-size: 13px; }
+        .empty { padding: 20px 5px; text-align: center; color: #65748b; } .notice { display: none; padding: 10px 12px; margin-top: 12px; border-radius: 7px; } .notice.show { display: block; } .error { background: #fff0ed; color: #a83d2d; }
+    </style>
+    <link rel="stylesheet" href="/navigation.css">
+    <link rel="stylesheet" href="/interfaz.css">
+</head>
+<body>
+    <header><div class="topbar">Apartamentos Blue</div><nav class="main-nav" aria-label="Navegación principal"><a href="/propiedades.html">Propiedades</a><a href="/clientes.html">Clientes</a><a href="/disponibilidad.html">Disponibilidad</a><a href="/reservas.html">Reservas</a><a href="/pagos.html">Pagos</a><a href="/reportes.html" aria-current="page">Reportes</a></nav></header>
+    <main><h1>Reportes</h1><p class="intro">Consulta ocupación e ingresos por mes o intervalo y filtra por propiedad o arrendatario.</p>
+        <div class="reports-overview">
+            <section class="panel"><div class="filter"><div class="field"><label for="month">Mes de consulta</label><input id="month" type="month"></div><div class="field"><label for="reportStart">Desde (opcional)</label><input id="reportStart" type="date"></div>
+<div class="field"><label for="reportEnd">Hasta (excluida)</label><input id="reportEnd" type="date"></div>
+<div class="field"><label for="reportProperty">Propiedad</label><select id="reportProperty"><option value="">Todas</option></select></div>
+<div class="field"><label for="reportClient">Arrendatario</label><select id="reportClient"><option value="">Todos</option></select></div>
+<button id="load" type="button">Consultar</button></div><div id="notice" class="notice" role="status" aria-live="polite"></div></section>
+            <section class="panel income-panel"><h2>Pagos recibidos en el periodo</h2><p id="income" class="total">—</p><p class="muted">Se suman los abonos marcados como pagados durante el periodo.</p></section>
+        </div>
+        <section class="panel"><h2>Reservas confirmadas en el periodo</h2><div class="table-wrap"><table><thead><tr><th>Reserva</th><th>Arrendatario</th><th>Propiedad / espacio</th><th>Fechas</th><th>Total</th></tr></thead><tbody id="occupancy"><tr><td colspan="5" class="empty">Selecciona un mes.</td></tr></tbody></table></div></section>
+        <section class="panel"><h2>Abonos vencidos del periodo al día de hoy</h2><div class="table-wrap"><table><thead><tr><th>Pago</th><th>Reserva</th><th>Arrendatario</th><th>Vencimiento</th><th>Monto</th></tr></thead><tbody id="overdue"><tr><td colspan="5" class="empty">Cargando...</td></tr></tbody></table></div></section>
+    </main>
+    <script>
+        const notice = document.getElementById("notice"), occupancyRows = document.getElementById("occupancy"), overdueRows = document.getElementById("overdue");
+        function add(parent, tag, text) { const el = document.createElement(tag); el.textContent = text ?? ""; parent.appendChild(el); return el; }
+        async function request(url) { const response = await fetch(url); const raw = await response.text(); let body = null; try { body = raw ? JSON.parse(raw) : null; } catch { body = raw; } if (!response.ok) throw new Error(body?.message || (typeof body === "string" ? body : `Error ${response.status}`)); return body; }
+        function money(value) { return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value || 0)); }
+        function date(value) { return value ? new Date(`${value}T00:00:00`).toLocaleDateString("es-MX") : "—"; }
+        function emptyRow(tbody, columns, text) { tbody.replaceChildren(); const tr = add(tbody, "tr", ""); const td = add(tr, "td", text); td.colSpan = columns; td.className = "empty"; }
+        function showError(text) { notice.textContent = text; notice.className = "notice show error"; }
+        function renderOccupancy(list) {
+            occupancyRows.replaceChildren();
+            if (!list?.length) { emptyRow(occupancyRows, 5, "No hay reservas confirmadas que ocupen este mes."); return; }
+            list.forEach(r => { const tr = add(occupancyRows, "tr", ""); add(tr, "td", `#${r.id_reserva}`); add(tr, "td", `${r.arrendatario?.nombres || ""} ${r.arrendatario?.apellidos || ""}`); add(tr, "td", `${r.propiedad?.titulo || "Propiedad"} · ${r.habitacion ? "Habitación " + r.habitacion.numero : "Inmueble completo"}`); add(tr, "td", `${date(r.fecha_inicio)} – ${date(r.fecha_fin)}`); add(tr, "td", money(r.monto_total)); });
+        }
+        function renderOverdue(list) {
+            overdueRows.replaceChildren();
+            if (!list?.length) { emptyRow(overdueRows, 5, "No hay abonos vencidos actualmente."); return; }
+            list.forEach(p => { const tr = add(overdueRows, "tr", ""); add(tr, "td", `#${p.id_pago}`); add(tr, "td", `#${p.reserva?.id_reserva || "—"}`); add(tr, "td", `${p.reserva?.arrendatario?.nombres || ""} ${p.reserva?.arrendatario?.apellidos || ""}`); add(tr, "td", date(p.fecha_vencimiento)); add(tr, "td", money(p.monto)); });
+        }
+        async function loadReports() {
+            const month = document.getElementById("month").value;
+            if (!month) { showError("Selecciona el mes que quieres consultar."); return; }
+            const query = new URLSearchParams({mes:month});
+            const start = document.getElementById("reportStart").value, end = document.getElementById("reportEnd").value;
+            if (start || end) { if (!start || !end || start >= end) { showError("Indica ambas fechas con el final posterior al inicio."); return; } query.set("fechaInicio",start); query.set("fechaFin",end); }
+            if (document.getElementById("reportProperty").value) query.set("propiedadId", document.getElementById("reportProperty").value);
+            if (document.getElementById("reportClient").value) query.set("clienteId", document.getElementById("reportClient").value);
+            notice.className = "notice";
+            try {
+                const [occupancy, income, overdue] = await Promise.all([
+                    request(`/api/reportes/ocupacion?${query}`),
+                    request(`/api/reportes/ingresos?${query}`),
+                    request(`/api/reportes/morosidad?${query}`)
+                ]);
+                renderOccupancy(occupancy); document.getElementById("income").textContent = money(income.total); renderOverdue(overdue);
+            } catch (error) { showError(`No se pudieron cargar los reportes: ${error.message}`); }
+        }
+        async function loadFilters() {
+            try { const [properties, clients] = await Promise.all([request("/api/propiedades"),request("/api/clientes")]);
+                properties.forEach(p => document.getElementById("reportProperty").add(new Option(p.titulo,p.id_propiedad)));
+                clients.forEach(c => document.getElementById("reportClient").add(new Option(`${c.nombres} ${c.apellidos}`,c.id)));
+            } catch(error) { showError(error.message); }
+        }
+        loadFilters();
+        const now = new Date(); document.getElementById("month").value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        document.getElementById("load").addEventListener("click", loadReports); loadReports();
+    </script>
+</body>
+</html>

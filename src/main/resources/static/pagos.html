@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagos | Apartamentos Blue</title>
+    <style>
+        :root { font-family: Arial, sans-serif; color: #203047; background: #f4f7fb; } * { box-sizing: border-box; } body { margin: 0; }
+        header { background: #fff; border-bottom: 1px solid #dce4ee; } .topbar, main { max-width: 1000px; margin: auto; padding: 18px 22px; } .topbar { font-weight: 700; color: #1e4f91; }
+        nav { display: flex; gap: 15px; flex-wrap: wrap; padding-top: 0; } nav a { color: #315c8e; text-decoration: none; } main { padding-top: 28px; }
+        h1 { margin: 0 0 8px; } .intro, .muted { color: #65748b; } .panel { background: #fff; border: 1px solid #dce4ee; border-radius: 12px; padding: 20px; margin-top: 18px; box-shadow: 0 4px 15px #1c35520a; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; align-items: end; } .field { display: grid; gap: 5px; } label { font-size: 14px; font-weight: 600; }
+        input, select, button { font: inherit; } input, select { width: 100%; border: 1px solid #cbd6e3; border-radius: 7px; padding: 9px 10px; background: white; }
+        button { border: 0; border-radius: 7px; background: #2463a6; color: white; padding: 9px 13px; cursor: pointer; } button.secondary { background: #e7eef7; color: #294a70; } button:disabled { opacity: .55; cursor: not-allowed; }
+        .notice { display: none; padding: 10px 12px; margin-top: 12px; border-radius: 7px; } .notice.show { display: block; } .success { background: #e8f7ed; color: #25633a; } .error { background: #fff0ed; color: #a83d2d; }
+        .summary { display: flex; flex-wrap: wrap; gap: 18px; margin: 15px 0 5px; } .summary div { background: #f3f7fb; padding: 12px 15px; border-radius: 8px; } .summary strong { display: block; margin-top: 4px; }
+        .table-wrap { overflow-x: auto; } table { width: 100%; border-collapse: collapse; min-width: 550px; } th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e4eaf1; } th { color: #63738a; font-size: 13px; }
+        .empty { padding: 20px 5px; text-align: center; color: #65748b; } .badge { display: inline-block; background: #eef3f8; border-radius: 99px; padding: 4px 8px; font-size: 12px; }
+        @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+    <link rel="stylesheet" href="/navigation.css">
+    <link rel="stylesheet" href="/interfaz.css">
+</head>
+<body>
+    <header><div class="topbar">Apartamentos Blue</div><nav class="main-nav" aria-label="Navegación principal"><a href="/propiedades.html">Propiedades</a><a href="/clientes.html">Clientes</a><a href="/disponibilidad.html">Disponibilidad</a><a href="/reservas.html">Reservas</a><a href="/pagos.html" aria-current="page">Pagos</a><a href="/reportes.html">Reportes</a></nav></header>
+    <main><h1>Pagos y saldo</h1><p class="intro">Agrega abonos y registra sus pagos. Las reservas canceladas conservan su historial y no aceptan nuevos cobros.</p>
+        <div class="payments-layout">
+            <section class="panel" aria-labelledby="paymentFormTitle">
+                <h2 id="paymentFormTitle">Registrar un abono</h2>
+                <div class="payment-fields">
+                    <div class="field"><label for="reservation">Reserva *</label><select id="reservation"><option value="">Cargando reservas...</option></select></div>
+                    <div class="field"><label for="amount">Monto del abono *</label><input id="amount" type="number" min="0.01" step="0.01"></div>
+                    <div class="field"><label for="method">Método *</label><select id="method"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="TARJETA">Tarjeta</option></select></div><div class="field"><label for="due">Fecha de vencimiento *</label><input id="due" type="date"></div>
+                </div>
+                <button id="addPayment" style="margin-top:13px" type="button">Registrar abono pendiente</button>
+                <div id="notice" class="notice" role="status" aria-live="polite"></div>
+            </section>
+            <section class="panel balance-panel" aria-labelledby="balanceTitle">
+                <h2 id="balanceTitle">Saldo de la reserva</h2>
+                <div class="summary">
+                    <div>Total de reserva<strong id="total">—</strong></div>
+                    <div>Pagado<strong id="paid">—</strong></div>
+                    <div>Saldo<strong id="balance">—</strong></div>
+                </div>
+            </section>
+        </div>
+        <section class="panel" style="margin-top:20px"><h2>Abonos de la reserva</h2><div class="table-wrap"><table><thead><tr><th>Monto</th><th>Vencimiento</th><th>Fecha de pago / método</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="rows"><tr><td colspan="5" class="empty">Selecciona una reserva.</td></tr></tbody></table></div></section>
+    </main>
+    <script>
+        const select = document.getElementById("reservation"), rows = document.getElementById("rows"), notice = document.getElementById("notice");
+        let reservations = [], payments = [], selectedReservation = null;
+        function add(parent, tag, text) { const el = document.createElement(tag); el.textContent = text ?? ""; parent.appendChild(el); return el; }
+        async function request(url, options = {}) { const response = await fetch(url, options); const raw = await response.text(); let body = null; try { body = raw ? JSON.parse(raw) : null; } catch { body = raw; } if (!response.ok) throw new Error(body?.message || (typeof body === "string" ? body : `Error ${response.status}`)); return body; }
+        function money(value) { return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value || 0)); }
+        function date(value) { return value ? new Date(`${value}T00:00:00`).toLocaleDateString("es-MX") : "—"; }
+        function show(message, kind = "success") { notice.textContent = message; notice.className = `notice show ${kind}`; }
+        async function loadPayments() {
+            const id = select.value; if (!id) {
+                payments = []; render(); ["total","paid","balance"].forEach(key => document.getElementById(key).textContent = "—"); return;
+            }
+            try {
+                const [reservation, list] = await Promise.all([request(`/api/reservas/${id}`), request(`/api/reservas/${id}/pagos`)]);
+                selectedReservation = reservation;
+                document.getElementById("addPayment").disabled = reservation.estado === "CANCELADA";
+                payments = list || []; const paidAmount = payments.filter(p => p.estado === "PAGADO").reduce((sum, p) => sum + Number(p.monto), 0);
+                document.getElementById("total").textContent = money(reservation.monto_total);
+                document.getElementById("paid").textContent = money(paidAmount);
+                document.getElementById("balance").textContent = money(Number(reservation.monto_total) - paidAmount);
+                render();
+            } catch (error) { show(`No se pudieron cargar los abonos: ${error.message}`, "error"); }
+        }
+        function render() {
+            rows.replaceChildren();
+            if (!payments.length) { const tr = add(rows, "tr", ""); const td = add(tr, "td", "Esta reserva aún no tiene abonos."); td.colSpan = 5; td.className = "empty"; return; }
+            payments.forEach(payment => {
+                const tr = add(rows, "tr", ""); add(tr, "td", money(payment.monto)); add(tr, "td", date(payment.fecha_vencimiento)); add(tr, "td", `${date(payment.fecha_pago)} · ${payment.metodo || "EFECTIVO"}`);
+                const today = new Date(); const todayText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+                const overdue = payment.estado === "PENDIENTE" && payment.fecha_vencimiento < todayText;
+                const state = add(tr, "td", overdue ? "VENCIDO" : payment.estado); state.className = "badge";
+                const cell = add(tr, "td", ""); if (payment.estado === "PENDIENTE" && selectedReservation?.estado !== "CANCELADA") { const button = add(cell, "button", "Marcar pagado"); button.type = "button"; button.className = "secondary"; button.addEventListener("click", async () => { try { await request(`/api/pagos/${payment.id_pago}/marcar-pagado`, { method: "PUT" }); await loadPayments(); show("Abono marcado como pagado."); } catch (error) { show(error.message, "error"); } }); }
+            });
+        }
+        async function loadReservations() {
+            try {
+                reservations = (await request("/api/reservas") || []);
+                select.replaceChildren(new Option(reservations.length ? "Selecciona una reserva..." : "No hay reservas registradas", ""));
+                reservations.forEach(r => select.add(new Option(`Reserva ${r.id_reserva} · ${r.propiedad?.titulo || "Propiedad"} · ${r.arrendatario?.nombres || ""} · ${money(r.monto_total)} · ${r.estado}`, r.id_reserva)));
+                if (reservations.length) { select.value = reservations[0].id_reserva; await loadPayments(); }
+            } catch (error) { show(`No se pudieron cargar las reservas: ${error.message}`, "error"); }
+        }
+        select.addEventListener("change", loadPayments);
+        document.getElementById("addPayment").addEventListener("click", async () => {
+            const id = select.value, amount = Number(document.getElementById("amount").value), due = document.getElementById("due").value;
+            if (!id || !amount || !due) { show("Selecciona una reserva e indica monto y fecha de vencimiento.", "error"); return; }
+            try { await request(`/api/reservas/${id}/pagos`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monto: amount, fecha_vencimiento: due, metodo: document.getElementById("method").value }) });
+                document.getElementById("amount").value = ""; await loadPayments(); show("Abono pendiente registrado.");
+            } catch (error) { show(`No se pudo registrar el abono: ${error.message}`, "error"); }
+        });
+        loadReservations();
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes | Apartamentos Blue</title>
+    <style>
+        :root { font-family: Arial, sans-serif; color: #203047; background: #f4f7fb; }
+        * { box-sizing: border-box; }
+        body { margin: 0; }
+        header { background: #fff; border-bottom: 1px solid #dce4ee; }
+        .topbar, main { max-width: 1100px; margin: auto; padding: 18px 22px; }
+        .topbar { font-weight: 700; color: #1e4f91; }
+        nav { display: flex; gap: 15px; flex-wrap: wrap; padding-top: 0; }
+        nav a { color: #315c8e; text-decoration: none; }
+        main { padding-top: 28px; }
+        h1 { margin: 0 0 8px; }
+        .intro, .muted { color: #65748b; }
+        .layout { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(400px, 1.5fr); gap: 18px; margin-top: 20px; align-items: start; }
+        .panel { background: #fff; border: 1px solid #dce4ee; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px #1c35520a; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .field { display: grid; gap: 5px; }
+        .wide { grid-column: 1 / -1; }
+        label { font-size: 14px; font-weight: 600; }
+        input, select, textarea, button { font: inherit; }
+        input, select, textarea { width: 100%; border: 1px solid #cbd6e3; border-radius: 7px; padding: 9px 10px; background: #fff; }
+        textarea { min-height: 66px; resize: vertical; }
+        button { border: 0; border-radius: 7px; background: #2463a6; color: white; padding: 9px 13px; cursor: pointer; }
+        button.secondary { background: #e7eef7; color: #294a70; }
+        button.danger { background: #fff0ed; color: #a83d2d; }
+        button:disabled { opacity: .55; cursor: not-allowed; }
+        .actions { display: flex; gap: 7px; flex-wrap: wrap; }
+        .notice { display: none; padding: 10px 12px; margin-top: 12px; border-radius: 7px; }
+        .notice.show { display: block; }
+        .success { background: #e8f7ed; color: #25633a; }
+        .error { background: #fff0ed; color: #a83d2d; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 570px; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e4eaf1; vertical-align: top; }
+        th { color: #63738a; font-size: 13px; }
+        .badge { display: inline-block; background: #eef3f8; border-radius: 99px; padding: 4px 8px; font-size: 12px; }
+        .empty { padding: 20px 5px; text-align: center; color: #65748b; }
+        @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+    </style>
+    <link rel="stylesheet" href="/navigation.css">
+    <link rel="stylesheet" href="/interfaz.css">
+</head>
+<body>
+    <header>
+        <div class="topbar">Apartamentos Blue</div>
+        <nav class="main-nav" aria-label="Navegación principal"><a href="/propiedades.html">Propiedades</a><a href="/clientes.html" aria-current="page">Clientes</a><a href="/disponibilidad.html">Disponibilidad</a><a href="/reservas.html">Reservas</a><a href="/pagos.html">Pagos</a><a href="/reportes.html">Reportes</a></nav>
+    </header>
+    <main>
+        <h1>Clientes y propietarios</h1>
+        <p class="intro">Registra arrendatarios y propietarios, actualiza sus datos o inactiva una cuenta.</p>
+        <div id="pageNotice" class="notice" role="status" aria-live="polite"></div>
+        <div class="layout">
+            <section class="panel">
+                <h2 id="formTitle">Registrar persona</h2>
+                <form id="clientForm">
+                    <div class="grid">
+                        <div class="field"><label for="tipo">Tipo *</label><select id="tipo" name="tipo" required><option value="CLIENTE">Arrendatario</option><option value="PROPIETARIO">Propietario</option></select></div>
+                        <div class="field"><label for="nombres">Nombre(s) *</label><input id="nombres" name="nombres" maxlength="35" required></div>
+                        <div class="field"><label for="apellidos">Apellidos *</label><input id="apellidos" name="apellidos" maxlength="35" required></div>
+                        <div class="field"><label for="email">Correo *</label><input id="email" name="email" type="email" maxlength="50" required></div>
+                        <div class="field"><label for="password">Contraseña <span id="passwordMark">*</span></label><input id="password" name="password" type="password" maxlength="100" autocomplete="new-password"><small id="passwordHint" class="muted">Se solicita al registrar; no se muestra después.</small></div>
+                        <div class="field"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" maxlength="15"></div>
+                        <div class="field"><label for="fechaNacimiento">Fecha de nacimiento</label><input id="fechaNacimiento" name="fechaNacimiento" type="date"></div>
+                        <div class="field"><label for="ine">INE</label><input id="ine" name="ine" maxlength="20"></div>
+                        <div class="field wide"><label for="direccion">Dirección</label><input id="direccion" name="direccion" maxlength="100"></div>
+                    </div>
+                    <div class="actions" style="margin-top:14px"><button id="saveButton" type="submit">Registrar</button><button id="cancelButton" class="secondary" type="button" hidden>Cancelar edición</button></div>
+                </form>
+                <div id="formNotice" class="notice" role="status" aria-live="polite"></div>
+            </section>
+            <section class="panel">
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h2>Personas registradas</h2><button id="refreshButton" class="secondary" type="button">Actualizar</button></div>
+                <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Tipo</th><th>Contacto</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="clientRows"><tr><td colspan="5" class="empty">Cargando...</td></tr></tbody></table></div>
+            </section>
+        </div>
+    </main>
+    <script>
+        let clients = [];
+        let editingId = null;
+        const rows = document.getElementById("clientRows");
+        const form = document.getElementById("clientForm");
+        const notice = document.getElementById("formNotice");
+
+        async function request(url, options = {}) {
+            const response = await fetch(url, options);
+            const raw = await response.text();
+            let body = null;
+            try { body = raw ? JSON.parse(raw) : null; } catch { body = raw; }
+            if (!response.ok) throw new Error(body?.message || (typeof body === "string" ? body : `Error ${response.status}`));
+            return body;
+        }
+        function show(message, kind = "success") { notice.textContent = message; notice.className = `notice show ${kind}`; }
+        function add(parent, tag, text) { const el = document.createElement(tag); el.textContent = text || ""; parent.appendChild(el); return el; }
+        function render() {
+            rows.replaceChildren();
+            if (!clients.length) { const tr = add(rows, "tr", ""); const td = add(tr, "td", "No hay personas registradas."); td.colSpan = 5; td.className = "empty"; return; }
+            clients.forEach(client => {
+                const tr = add(rows, "tr", "");
+                const name = add(tr, "td", `${client.nombres || ""} ${client.apellidos || ""}`);
+                name.appendChild(document.createElement("br")); add(name, "small", `ID ${client.id}`);
+                add(tr, "td", client.tipo === "PROPIETARIO" ? "Propietario" : client.tipo === "CLIENTE" ? "Arrendatario" : (client.tipo || "—"));
+                add(tr, "td", `${client.email || "—"}${client.telefono ? " · " + client.telefono : ""}`);
+                const status = add(tr, "td", ""); const badge = add(status, "span", client.estatus || "ACTIVO"); badge.className = "badge";
+                const actionCell = add(tr, "td", ""); const actions = document.createElement("div"); actions.className = "actions"; actionCell.appendChild(actions);
+                const edit = add(actions, "button", "Editar"); edit.type = "button"; edit.className = "secondary"; edit.addEventListener("click", () => startEdit(client));
+                if (client.estatus === "INACTIVO") {
+                    const activate = add(actions, "button", "Activar"); activate.type = "button"; activate.addEventListener("click", () => changeStatus(client.id, true));
+                } else {
+                    const deactivate = add(actions, "button", "Inactivar"); deactivate.type = "button"; deactivate.className = "danger"; deactivate.addEventListener("click", () => changeStatus(client.id, false));
+                }
+            });
+        }
+        function dateForInput(value) {
+            if (!value) return "";
+            const date = typeof value === "number" ? new Date(value) : new Date(value);
+            return Number.isNaN(date.getTime()) ? String(value).slice(0, 10) : date.toISOString().slice(0, 10);
+        }
+        function startEdit(client) {
+            editingId = client.id;
+            ["tipo", "nombres", "apellidos", "email", "telefono", "ine", "direccion"].forEach(key => form.elements[key].value = client[key] || "");
+            form.elements.fechaNacimiento.value = dateForInput(client.fechaNacimiento);
+            form.elements.password.value = "";
+            form.elements.password.required = false;
+            document.getElementById("passwordMark").textContent = "opcional";
+            document.getElementById("passwordHint").textContent = "Déjala vacía para conservar la actual.";
+            document.getElementById("formTitle").textContent = `Editar persona · ID ${client.id}`;
+            document.getElementById("saveButton").textContent = "Guardar cambios";
+            document.getElementById("cancelButton").hidden = false;
+            notice.className = "notice";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        function resetForm() {
+            editingId = null; form.reset(); form.elements.tipo.value = "CLIENTE"; form.elements.password.required = true;
+            document.getElementById("passwordMark").textContent = "*";
+            document.getElementById("passwordHint").textContent = "Se solicita al registrar; no se muestra después.";
+            document.getElementById("formTitle").textContent = "Registrar persona";
+            document.getElementById("saveButton").textContent = "Registrar";
+            document.getElementById("cancelButton").hidden = true;
+        }
+        async function loadClients() {
+            rows.replaceChildren(); const tr = add(rows, "tr", ""); const td = add(tr, "td", "Cargando..."); td.colSpan = 5; td.className = "empty";
+            try { clients = await request("/api/clientes") || []; render(); }
+            catch (error) { rows.replaceChildren(); const row = add(rows, "tr", ""); const cell = add(row, "td", `No se pudieron cargar los clientes: ${error.message}`); cell.colSpan = 5; cell.className = "empty"; }
+        }
+        async function changeStatus(id, activate) {
+            try {
+                await request(activate ? `/api/clientes/${id}/activar` : `/api/clientes/${id}`, { method: activate ? "PUT" : "DELETE" });
+                await loadClients(); show(activate ? "Persona activada." : "Persona inactivada. Sus registros históricos se conservan.");
+            } catch (error) { show(`No se pudo actualizar el estado: ${error.message}`, "error"); }
+        }
+        form.addEventListener("submit", async event => {
+            event.preventDefault(); const data = new FormData(form); const button = document.getElementById("saveButton"); button.disabled = true;
+            const wasEditing = editingId !== null;
+            const nacimiento = data.get("fechaNacimiento");
+            const payload = {
+                tipo: data.get("tipo"), nombres: data.get("nombres").trim(), apellidos: data.get("apellidos").trim(),
+                email: data.get("email").trim(), password: data.get("password") || null,
+                telefono: data.get("telefono").trim() || null,
+                fechaNacimiento: nacimiento ? new Date(`${nacimiento}T00:00:00`).toISOString() : null,
+                ine: data.get("ine").trim() || null, direccion: data.get("direccion").trim() || null
+            };
+            try {
+                await request(wasEditing ? `/api/clientes/${editingId}` : "/api/clientes", {
+                    method: wasEditing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+                });
+                resetForm(); await loadClients(); show(wasEditing ? "Datos actualizados." : "Persona registrada.");
+            } catch (error) { show(`No se pudo guardar: ${error.message}`, "error"); }
+            finally { button.disabled = false; }
+        });
+        document.getElementById("cancelButton").addEventListener("click", resetForm);
+        document.getElementById("refreshButton").addEventListener("click", loadClients);
+        loadClients();
+    </script>
+</body>
+</html>

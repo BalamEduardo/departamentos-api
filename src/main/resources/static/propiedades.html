@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Propiedades | Apartamentos Blue</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #1f2937;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --surface: #ffffff;
+            --page: #f5f7fb;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #166534;
+            --danger: #b91c1c;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--page);
+            color: var(--ink);
+            font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .topbar, main {
+            width: min(1120px, calc(100% - 32px));
+            margin: 0 auto;
+        }
+
+        .topbar { padding: 16px 0; font-weight: 700; }
+        .brand-mark { color: var(--primary); }
+        main { padding: 32px 0 56px; }
+        h1 { margin: 0 0 6px; font-size: clamp(1.7rem, 4vw, 2.2rem); }
+        h2 { margin: 0; font-size: 1.15rem; }
+        h3 { margin: 0 0 4px; font-size: 1rem; }
+        p { margin: 0; }
+        .intro { margin-bottom: 24px; color: var(--muted); }
+
+        .panel {
+            min-width: 0;
+            padding: 22px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgb(15 23 42 / 4%);
+        }
+
+        .panel-heading, .section-heading, .property-top, .room-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .panel-heading { margin-bottom: 18px; }
+        .section-heading { margin: 28px 0 14px; }
+        .subtle, .hint { color: var(--muted); font-size: .9rem; }
+        .hint { margin-top: 5px; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .property-list, .room-list { display: grid; gap: 12px; }
+        .property-card, .room-card {
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: #fff;
+        }
+
+        .property-card.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgb(37 99 235 / 10%);
+        }
+
+        .property-top { align-items: flex-start; }
+        .property-meta, .room-meta { margin-top: 8px; color: var(--muted); font-size: .9rem; }
+        .badge {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: .78rem;
+            white-space: nowrap;
+        }
+
+        form { display: grid; gap: 13px; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .field { display: grid; gap: 5px; }
+        .field.full { grid-column: 1 / -1; }
+        label { font-size: .88rem; font-weight: 600; }
+        input, select, textarea {
+            width: 100%;
+            min-height: 40px;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+        }
+        textarea { min-height: 72px; resize: vertical; }
+        input:focus, select:focus, textarea:focus {
+            outline: 3px solid rgb(37 99 235 / 15%);
+            border-color: var(--primary);
+        }
+
+        button {
+            min-height: 40px;
+            padding: 8px 13px;
+            border: 0;
+            border-radius: 7px;
+            background: var(--primary);
+            color: #fff;
+            font: inherit;
+            font-weight: 650;
+            cursor: pointer;
+        }
+        button:hover { background: var(--primary-dark); }
+        button:disabled { cursor: not-allowed; opacity: .55; }
+        button.secondary { border: 1px solid var(--line); background: #fff; color: var(--ink); }
+        button.secondary:hover { background: #f8fafc; }
+        .form-actions { display: flex; justify-content: flex-end; }
+
+        .notice {
+            display: none;
+            margin: 0 0 18px;
+            padding: 11px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+        }
+        .notice.show { display: block; }
+        .notice.error { border-color: #fecaca; background: #fef2f2; color: var(--danger); }
+        .notice.success { border-color: #bbf7d0; background: #f0fdf4; color: var(--success); }
+        .empty { padding: 24px 12px; text-align: center; color: var(--muted); }
+        .room-section { margin-top: 20px; }
+        .room-form-wrap { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+        .room-form-wrap h3 { margin-bottom: 12px; }
+
+        @media (max-width: 760px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .panel { padding: 17px; }
+        }
+
+        @media (max-width: 480px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .field.full { grid-column: auto; }
+            .panel-heading, .section-heading { align-items: flex-start; }
+            main { padding-top: 24px; }
+        }
+    </style>
+    <link rel="stylesheet" href="/navigation.css">
+    <link rel="stylesheet" href="/interfaz.css">
+</head>
+<body>
+    <header>
+        <div class="topbar"><span class="brand-mark">AB</span> Apartamentos Blue</div>
+        <nav class="main-nav" aria-label="Navegación principal">
+            <a href="/propiedades.html" aria-current="page">Propiedades</a><a href="/clientes.html">Clientes</a>
+            <a href="/disponibilidad.html">Disponibilidad</a><a href="/reservas.html">Reservas</a><a href="/pagos.html">Pagos</a><a href="/reportes.html">Reportes</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Propiedades y habitaciones</h1>
+        <p class="intro">Registra inmuebles y administra las habitaciones que pertenecen a cada uno.</p>
+        <div id="pageNotice" class="notice" role="status" aria-live="polite"></div>
+
+        <div class="main-grid">
+            <section class="panel" aria-labelledby="propertiesTitle">
+                <div class="panel-heading">
+                    <div>
+                        <h2 id="propertiesTitle">Propiedades registradas</h2>
+                        <p class="subtle">Selecciona una para consultar sus habitaciones.</p>
+                    </div>
+                    <button id="refreshButton" class="secondary" type="button">Actualizar</button>
+                </div>
+                <div id="propertyList" class="property-list" aria-live="polite">
+                    <p class="empty">Cargando propiedades...</p>
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="propertyFormTitle">
+                <div class="panel-heading">
+                    <div>
+                        <h2 id="propertyFormTitle">Registrar propiedad</h2>
+                        <p class="subtle">Los campos con * son obligatorios.</p>
+                    </div>
+                </div>
+                <form id="propertyForm">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="propietarioId">Propietario *</label>
+                            <select id="propietarioId" name="propietarioId" required>
+                                <option value="">Cargando propietarios...</option>
+                            </select>
+                            <span class="hint">Solo aparecen propietarios activos registrados.</span>
+                        </div>
+                        <div class="field">
+                            <label for="tipo">Tipo de inmueble *</label>
+                            <select id="tipo" name="tipo" required>
+                                <option value="">Selecciona...</option>
+                                <option value="CASA">Casa</option>
+                                <option value="DEPARTAMENTO">Departamento</option>
+                                <option value="PISO">Piso</option>
+                            </select>
+                        </div>
+                        <div class="field full">
+                            <label for="titulo">Título *</label>
+                            <input id="titulo" name="titulo" maxlength="100" required>
+                        </div>
+                        <div class="field full">
+                            <label for="descripcion">Descripción *</label>
+                            <textarea id="descripcion" name="descripcion" maxlength="500" required></textarea>
+                        </div>
+                        <div class="field full">
+                            <label for="direccion">Dirección *</label>
+                            <input id="direccion" name="direccion" maxlength="150" required>
+                        </div>
+                        <div class="field">
+                            <label for="ciudad">Ciudad *</label>
+                            <input id="ciudad" name="ciudad" maxlength="50" required>
+                        </div>
+                        <div class="field">
+                            <label for="estidadFederativa">Estado *</label>
+                            <input id="estidadFederativa" name="estidadFederativa" maxlength="50" required>
+                        </div>
+                        <div class="field">
+                            <label for="codigo_postal">Código postal *</label>
+                            <input id="codigo_postal" name="codigo_postal" type="number" min="0" max="99999" required>
+                        </div>
+                        <div class="field">
+                            <label for="pais">País *</label>
+                            <input id="pais" name="pais" value="México" maxlength="50" required>
+                        </div>
+                        <div class="field">
+                            <label for="latitud">Latitud *</label>
+                            <input id="latitud" name="latitud" type="number" step="any" min="-90" max="90" required>
+                        </div>
+                        <div class="field">
+                            <label for="longitud">Longitud *</label>
+                            <input id="longitud" name="longitud" type="number" step="any" min="-180" max="180" required>
+                        </div>
+                        <div class="field">
+                            <label for="precio_noche">Precio por noche *</label>
+                            <input id="precio_noche" name="precio_noche" type="number" min="0.01" step="0.01" required>
+                        </div>
+                        <div class="field">
+                            <label for="capacidad">Capacidad de personas *</label>
+                            <input id="capacidad" name="capacidad" type="number" min="1" required>
+                        </div>
+                        <div class="field">
+                            <label for="amueblada">¿Amueblada? *</label>
+                            <select id="amueblada" name="amueblada" required>
+                                <option value="true">Sí</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="num_estacionamientos">Estacionamientos *</label>
+                            <input id="num_estacionamientos" name="num_estacionamientos" type="number" min="0" value="0" required>
+                        </div>
+                        <div class="field">
+                            <label for="num_habitaciones">Número de habitaciones *</label>
+                            <input id="num_habitaciones" name="num_habitaciones" type="number" min="0" value="0" required>
+                        </div>
+                        <div class="field">
+                            <label for="num_banos">Número de baños *</label>
+                            <input id="num_banos" name="num_banos" type="number" min="0" value="0" required>
+                        </div>
+                        <div class="field">
+                            <label for="metro_cuadrados">Metros cuadrados *</label>
+                            <input id="metro_cuadrados" name="metro_cuadrados" type="number" min="1" required>
+                        </div>
+                        <div class="field">
+                            <label for="estado">Estado del inmueble *</label>
+                            <select id="estado" name="estado" required>
+                                <option value="DISPONIBLE">Disponible</option>
+                                <option value="NO_DISPONIBLE">No disponible</option>
+                                <option value="MANTENIMIENTO">Mantenimiento</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="comodidades">Comodidades</label>
+                            <input id="comodidades" name="comodidades" maxlength="300" placeholder="Wi-Fi, cocina...">
+                        </div>
+                        <div class="field full">
+                            <label for="reglas">Reglas</label>
+                            <textarea id="reglas" name="reglas" maxlength="300" placeholder="Reglas para los huéspedes"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="cancelPropertyEdit" class="secondary" type="button" hidden>Cancelar edición</button><button id="savePropertyButton" type="submit">Guardar propiedad</button>
+                    </div>
+                    <div id="propertyFormNotice" class="notice" role="status" aria-live="polite"></div>
+                </form>
+            </section>
+        </div>
+
+        <section class="panel room-section" aria-labelledby="roomsTitle">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="roomsTitle">Habitaciones</h2>
+                    <p id="selectedPropertyLabel" class="subtle">Selecciona una propiedad para ver sus habitaciones.</p>
+                </div>
+            </div>
+            <div id="roomList" class="room-list">
+                <p class="empty">Aún no hay una propiedad seleccionada.</p>
+            </div>
+
+            <div class="room-form-wrap">
+                <h3 id="roomFormTitle">Registrar habitación</h3>
+                <form id="roomForm">
+                    <fieldset id="roomFields" disabled style="border:0;padding:0;margin:0;min-width:0">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="numero">Número o nombre *</label>
+                                <input id="numero" name="numero" maxlength="20" required>
+                            </div>
+                            <div class="field">
+                                <label for="tipo_habitacion">Tipo *</label>
+                                <select id="tipo_habitacion" name="tipo_habitacion" required>
+                                    <option value="INDIVIDUAL">Individual</option>
+                                    <option value="DOBLE">Doble</option>
+                                    <option value="SUITE">Suite</option>
+                                </select>
+                            </div>
+                            <div class="field full">
+                                <label for="descripcionHabitacion">Descripción *</label>
+                                <textarea id="descripcionHabitacion" name="descripcion" maxlength="500" required></textarea>
+                            </div>
+                            <div class="field">
+                                <label for="capacidadHabitacion">Capacidad *</label>
+                                <input id="capacidadHabitacion" name="capacidad" type="number" min="1" required>
+                            </div>
+                            <div class="field">
+                                <label for="num_camas">Número de camas *</label>
+                                <input id="num_camas" name="num_camas" type="number" min="1" required>
+                            </div>
+                            <div class="field">
+                                <label for="bano_privado">¿Baño privado? *</label>
+                                <select id="bano_privado" name="bano_privado" required>
+                                    <option value="true">Sí</option>
+                                    <option value="false">No</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="amuebladaHabitacion">¿Amueblada? *</label>
+                                <select id="amuebladaHabitacion" name="amueblada" required>
+                                    <option value="true">Sí</option>
+                                    <option value="false">No</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="metrosHabitacion">Metros cuadrados *</label>
+                                <input id="metrosHabitacion" name="metro_cuadrados" type="number" min="1" step="0.1" required>
+                            </div>
+                            <div class="field">
+                                <label for="nivel">Nivel o piso *</label>
+                                <input id="nivel" name="nivel" type="number" min="0" value="0" required>
+                            </div>
+                            <div class="field">
+                                <label for="precioHabitacion">Precio por noche *</label>
+                                <input id="precioHabitacion" name="precio_noche" type="number" min="0.01" step="0.01" required>
+                            </div>
+                            <div class="field">
+                                <label for="estadoHabitacion">Estado *</label>
+                                <select id="estadoHabitacion" name="estado" required>
+                                    <option value="DISPONIBLE">Disponible</option>
+                                    <option value="NO_DISPONIBLE">No disponible</option>
+                                    <option value="MANTENIMIENTO">Mantenimiento</option>
+                                </select>
+                            </div>
+                            <div class="field full">
+                                <label for="comodidadesHabitacion">Comodidades</label>
+                                <input id="comodidadesHabitacion" name="comodidades" maxlength="300" placeholder="Clóset, escritorio...">
+                            </div>
+                        </div>
+                        <div class="form-actions" style="margin-top:13px">
+                            <button id="cancelRoomEdit" class="secondary" type="button" hidden>Cancelar edición</button><button id="saveRoomButton" type="submit">Guardar habitación</button>
+                        </div>
+                    </fieldset>
+                    <div id="roomFormNotice" class="notice" role="status" aria-live="polite"></div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const propertyList = document.getElementById("propertyList");
+        const roomList = document.getElementById("roomList");
+        const selectedPropertyLabel = document.getElementById("selectedPropertyLabel");
+        const roomFields = document.getElementById("roomFields");
+        const ownerSelect = document.getElementById("propietarioId");
+        let properties = [];
+        let selectedPropertyId = null;
+
+        function showNotice(element, message, kind) {
+            element.textContent = message;
+            element.className = `notice show ${kind || ""}`;
+        }
+
+        function clearNotice(element) {
+            element.textContent = "";
+            element.className = "notice";
+        }
+
+        async function apiRequest(url, options = {}) {
+            const response = await fetch(url, options);
+            const text = await response.text();
+            let body = null;
+            if (text) {
+                try { body = JSON.parse(text); }
+                catch { body = text; }
+            }
+            if (!response.ok) {
+                const detail = typeof body === "string" ? body : body?.message;
+                throw new Error(detail || `Error del servidor (${response.status}).`);
+            }
+            return body;
+        }
+
+        function addText(parent, tag, className, text) {
+            const element = document.createElement(tag);
+            if (className) element.className = className;
+            element.textContent = text ?? "";
+            parent.appendChild(element);
+            return element;
+        }
+
+        function money(value) {
+            return new Intl.NumberFormat("es-MX", {
+                style: "currency", currency: "MXN", maximumFractionDigits: 2
+            }).format(Number(value || 0));
+        }
+
+        async function loadOwners() {
+            try {
+                const clients = await apiRequest("/api/clientes") || [];
+                const owners = clients.filter(client => client.tipo === "PROPIETARIO" && client.estatus === "ACTIVO");
+                ownerSelect.replaceChildren();
+                const first = document.createElement("option");
+                first.value = "";
+                first.textContent = owners.length ? "Selecciona un propietario..." : "No hay propietarios activos";
+                ownerSelect.appendChild(first);
+                for (const owner of owners) {
+                    const option = document.createElement("option");
+                    option.value = owner.id;
+                    option.textContent = `${owner.nombres} ${owner.apellidos} · ${owner.email}`;
+                    ownerSelect.appendChild(option);
+                }
+                ownerSelect.disabled = owners.length === 0;
+                document.getElementById("savePropertyButton").disabled = owners.length === 0;
+            } catch (error) {
+                ownerSelect.replaceChildren(new Option("No se pudieron cargar los propietarios", ""));
+                ownerSelect.disabled = true;
+                document.getElementById("savePropertyButton").disabled = true;
+                showNotice(document.getElementById("pageNotice"), `No se pudieron cargar los propietarios: ${error.message}`, "error");
+            }
+        }
+
+        let editingPropertyId = null, editingRoomId = null;
+        function fill(formId, values) {
+            const form = document.getElementById(formId);
+            for (const element of form.elements) {
+                if (element.name && values[element.name] !== undefined) element.value = String(values[element.name] ?? "");
+            }
+        }
+        function resetPropertyEdit() {
+            editingPropertyId = null; document.getElementById("propertyForm").reset();
+            document.getElementById("propietarioId").disabled = false;
+            document.getElementById("propertyFormTitle").textContent = "Registrar propiedad";
+            document.getElementById("savePropertyButton").textContent = "Guardar propiedad";
+            document.getElementById("cancelPropertyEdit").hidden = true;
+        }
+        function resetRoomEdit() {
+            editingRoomId = null; document.getElementById("roomForm").reset();
+            document.getElementById("roomFormTitle").textContent = "Registrar habitación";
+            document.getElementById("saveRoomButton").textContent = "Guardar habitación";
+            document.getElementById("cancelRoomEdit").hidden = true;
+        }
+        function editProperty(property) {
+            editingPropertyId = property.id_propiedad; fill("propertyForm", property);
+            const owner = document.getElementById("propietarioId");
+            if (![...owner.options].some(o => o.value === String(property.propietario.id))) owner.add(new Option("Propietario actual", property.propietario.id));
+            owner.value = property.propietario.id; owner.disabled = true;
+            document.getElementById("propertyFormTitle").textContent = `Editar propiedad ${property.id_propiedad}`;
+            document.getElementById("savePropertyButton").textContent = "Guardar cambios";
+            document.getElementById("cancelPropertyEdit").hidden = false;
+            document.getElementById("propertyForm").scrollIntoView({behavior:"smooth",block:"start"});
+        }
+        function editRoom(room) {
+            editingRoomId = room.id_habitacion; fill("roomForm", room);
+            document.getElementById("roomFormTitle").textContent = `Editar habitación ${room.numero}`;
+            document.getElementById("saveRoomButton").textContent = "Guardar cambios";
+            document.getElementById("cancelRoomEdit").hidden = false;
+            document.getElementById("roomForm").scrollIntoView({behavior:"smooth",block:"start"});
+        }
+        function actionButton(parent, text, action) {
+            const button = document.createElement("button"); button.type = "button"; button.className = "secondary";
+            button.textContent = text; button.style.margin = "8px 4px 0 0"; button.addEventListener("click", action); parent.appendChild(button);
+        }
+        async function removeRecord(url, label, refresh) {
+            if (!window.confirm(`¿Eliminar ${label}? Los registros con historial no pueden eliminarse.`)) return;
+            try { await apiRequest(url, {method:"DELETE"}); await refresh(); showNotice(document.getElementById("pageNotice"), `${label} eliminado.`, "success"); }
+            catch (error) { showNotice(document.getElementById("pageNotice"), error.message, "error"); }
+        }
+        document.getElementById("cancelPropertyEdit").addEventListener("click", resetPropertyEdit);
+        document.getElementById("cancelRoomEdit").addEventListener("click", resetRoomEdit);
+
+        function renderProperties() {
+            propertyList.replaceChildren();
+            if (properties.length === 0) {
+                addText(propertyList, "p", "empty", "No hay propiedades registradas. Puedes agregar la primera con el formulario.");
+                selectedPropertyId = null;
+                roomFields.disabled = true;
+                selectedPropertyLabel.textContent = "Selecciona una propiedad para ver sus habitaciones.";
+                roomList.replaceChildren();
+                addText(roomList, "p", "empty", "Aún no hay una propiedad seleccionada.");
+                return;
+            }
+
+            for (const property of properties) {
+                const card = document.createElement("article");
+                card.className = `property-card${property.id_propiedad === selectedPropertyId ? " selected" : ""}`;
+                const top = document.createElement("div");
+                top.className = "property-top";
+                const titleGroup = document.createElement("div");
+                addText(titleGroup, "h3", "", property.titulo || `Propiedad ${property.id_propiedad}`);
+                addText(titleGroup, "p", "subtle", `${property.tipo || "Inmueble"} · ID ${property.id_propiedad}`);
+                top.appendChild(titleGroup);
+                addText(top, "span", "badge", property.estado || "Sin estado");
+                card.appendChild(top);
+
+                const location = [property.direccion, property.ciudad, property.estidadFederativa]
+                    .filter(Boolean).join(", ");
+                addText(card, "p", "property-meta", location || "Sin ubicación registrada");
+                addText(card, "p", "property-meta", `${money(property.precio_noche)} por noche · Capacidad ${property.capacidad ?? 0}`);
+
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "secondary";
+                button.style.marginTop = "12px";
+                button.textContent = property.id_propiedad === selectedPropertyId ? "Habitaciones seleccionadas" : "Ver habitaciones";
+                button.disabled = property.id_propiedad === selectedPropertyId;
+                button.addEventListener("click", () => selectProperty(property.id_propiedad));
+                card.appendChild(button);
+                actionButton(card, "Editar", () => editProperty(property));
+                actionButton(card, "Eliminar", () => removeRecord(`/api/propiedades/${property.id_propiedad}`, "Propiedad", async () => { resetPropertyEdit(); resetRoomEdit(); await loadProperties(null); }));
+                propertyList.appendChild(card);
+            }
+        }
+
+        function renderRooms(rooms) {
+            roomList.replaceChildren();
+            if (!rooms || rooms.length === 0) {
+                addText(roomList, "p", "empty", "Esta propiedad todavía no tiene habitaciones.");
+                return;
+            }
+
+            for (const room of rooms) {
+                const card = document.createElement("article");
+                card.className = "room-card";
+                const top = document.createElement("div");
+                top.className = "room-top";
+                addText(top, "h3", "", `${room.numero || "Habitación"} · ${room.tipo_habitacion || ""}`);
+                addText(top, "span", "badge", room.estado || "Sin estado");
+                card.appendChild(top);
+                addText(card, "p", "room-meta", room.descripcion || "Sin descripción");
+                addText(card, "p", "room-meta", `${money(room.precio_noche)} por noche · Capacidad ${room.capacidad ?? 0} · ${room.metro_cuadrados ?? 0} m²`);
+                addText(card, "p", "room-meta", `Camas: ${room.num_camas ?? 0} · Baño privado: ${room.bano_privado ? "Sí" : "No"} · Nivel: ${room.nivel ?? 0}`);
+                actionButton(card, "Editar", () => editRoom(room));
+                actionButton(card, "Eliminar", () => removeRecord(`/api/habitaciones/${room.id_habitacion}`, "Habitación", async () => { resetRoomEdit(); await loadRooms(selectedPropertyId); }));
+                roomList.appendChild(card);
+            }
+        }
+
+        async function loadRooms(propertyId) {
+            roomList.replaceChildren();
+            addText(roomList, "p", "empty", "Cargando habitaciones...");
+            try {
+                const rooms = await apiRequest(`/api/propiedades/${propertyId}/habitaciones`);
+                renderRooms(rooms);
+            } catch (error) {
+                roomList.replaceChildren();
+                addText(roomList, "p", "empty", `No se pudieron cargar las habitaciones: ${error.message}`);
+            }
+        }
+
+        async function selectProperty(propertyId) {
+            resetRoomEdit();
+            selectedPropertyId = propertyId;
+            const property = properties.find(item => item.id_propiedad === propertyId);
+            selectedPropertyLabel.textContent = property
+                ? `${property.titulo || "Propiedad"} · ID ${property.id_propiedad}`
+                : "Propiedad seleccionada";
+            roomFields.disabled = false;
+            clearNotice(document.getElementById("roomFormNotice"));
+            renderProperties();
+            await loadRooms(propertyId);
+        }
+
+        async function loadProperties(preferredId = selectedPropertyId) {
+            propertyList.replaceChildren();
+            addText(propertyList, "p", "empty", "Cargando propiedades...");
+            try {
+                properties = await apiRequest("/api/propiedades") || [];
+                const chosen = properties.find(item => item.id_propiedad === preferredId) || properties[0];
+                selectedPropertyId = chosen ? chosen.id_propiedad : null;
+                renderProperties();
+                if (chosen) {
+                    selectedPropertyLabel.textContent = `${chosen.titulo || "Propiedad"} · ID ${chosen.id_propiedad}`;
+                    roomFields.disabled = false;
+                    await loadRooms(chosen.id_propiedad);
+                }
+            } catch (error) {
+                properties = [];
+                propertyList.replaceChildren();
+                addText(propertyList, "p", "empty", `No se pudieron cargar las propiedades: ${error.message}`);
+                showNotice(document.getElementById("pageNotice"), "Revisa que la aplicación esté iniciada y que la API esté disponible.", "error");
+            }
+        }
+
+        document.getElementById("refreshButton").addEventListener("click", () => loadProperties());
+
+        document.getElementById("propertyForm").addEventListener("submit", async event => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = document.getElementById("savePropertyButton");
+            const notice = document.getElementById("propertyFormNotice");
+            clearNotice(notice);
+            button.disabled = true;
+
+            const payload = {
+                propietario: { id: Number(document.getElementById("propietarioId").value) },
+                tipo: data.get("tipo"),
+                titulo: data.get("titulo").trim(),
+                descripcion: data.get("descripcion").trim(),
+                direccion: data.get("direccion").trim(),
+                ciudad: data.get("ciudad").trim(),
+                estidadFederativa: data.get("estidadFederativa").trim(),
+                codigo_postal: Number(data.get("codigo_postal")),
+                pais: data.get("pais").trim(),
+                latitud: Number(data.get("latitud")),
+                longitud: Number(data.get("longitud")),
+                precio_noche: Number(data.get("precio_noche")),
+                capacidad: Number(data.get("capacidad")),
+                amueblada: data.get("amueblada") === "true",
+                num_estacionamientos: Number(data.get("num_estacionamientos")),
+                num_habitaciones: Number(data.get("num_habitaciones")),
+                num_banos: Number(data.get("num_banos")),
+                metro_cuadrados: Number(data.get("metro_cuadrados")),
+                comodidades: data.get("comodidades").trim(),
+                reglas: data.get("reglas").trim(),
+                estado: data.get("estado")
+            };
+
+            try {
+                const wasEditing = editingPropertyId !== null;
+                const created = await apiRequest(wasEditing ? `/api/propiedades/${editingPropertyId}` : "/api/propiedades", {
+                    method: wasEditing ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                resetPropertyEdit();
+                document.getElementById("pais").value = "México";
+                document.getElementById("num_estacionamientos").value = "0";
+                document.getElementById("num_habitaciones").value = "0";
+                document.getElementById("num_banos").value = "0";
+                showNotice(notice, wasEditing ? "Propiedad actualizada." : "Propiedad registrada.", "success");
+                await loadProperties(created?.id_propiedad ?? null);
+            } catch (error) {
+                showNotice(notice, `No se pudo registrar la propiedad: ${error.message}`, "error");
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById("roomForm").addEventListener("submit", async event => {
+            event.preventDefault();
+            if (selectedPropertyId === null) return;
+
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            const button = document.getElementById("saveRoomButton");
+            const notice = document.getElementById("roomFormNotice");
+            clearNotice(notice);
+            button.disabled = true;
+
+            const payload = {
+                numero: data.get("numero").trim(),
+                tipo_habitacion: data.get("tipo_habitacion"),
+                descripcion: data.get("descripcion").trim(),
+                capacidad: Number(data.get("capacidad")),
+                num_camas: Number(data.get("num_camas")),
+                bano_privado: data.get("bano_privado") === "true",
+                amueblada: data.get("amueblada") === "true",
+                metro_cuadrados: Number(data.get("metro_cuadrados")),
+                nivel: Number(data.get("nivel")),
+                precio_noche: Number(data.get("precio_noche")),
+                comodidades: data.get("comodidades").trim(),
+                estado: data.get("estado")
+            };
+
+            try {
+                const wasEditing = editingRoomId !== null;
+                await apiRequest(wasEditing ? `/api/habitaciones/${editingRoomId}` : `/api/propiedades/${selectedPropertyId}/habitaciones`, {
+                    method: wasEditing ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                resetRoomEdit();
+                showNotice(notice, wasEditing ? "Habitación actualizada." : "Habitación registrada.", "success");
+                await loadRooms(selectedPropertyId);
+            } catch (error) {
+                showNotice(notice, `No se pudo registrar la habitación: ${error.message}`, "error");
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        loadOwners();
+        loadProperties(null);
+    </script>
+</body>
+</html>

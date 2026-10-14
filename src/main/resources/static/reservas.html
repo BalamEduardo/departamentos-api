@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservas | Apartamentos Blue</title>
+    <style>
+        :root { font-family: Arial, sans-serif; color: #203047; background: #f4f7fb; } * { box-sizing: border-box; } body { margin: 0; }
+        header { background: #fff; border-bottom: 1px solid #dce4ee; } .topbar, main { max-width: 1100px; margin: auto; padding: 18px 22px; }
+        .topbar { font-weight: 700; color: #1e4f91; } nav { display: flex; gap: 15px; flex-wrap: wrap; padding-top: 0; } nav a { color: #315c8e; text-decoration: none; }
+        main { padding-top: 28px; } h1 { margin: 0 0 8px; } .intro, .muted { color: #65748b; }
+        .layout { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(400px, 1.5fr); gap: 18px; margin-top: 20px; align-items: start; }
+        .panel { background: #fff; border: 1px solid #dce4ee; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px #1c35520a; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .field { display: grid; gap: 5px; } .wide { grid-column: 1 / -1; }
+        label { font-size: 14px; font-weight: 600; } input, select, button { font: inherit; } input, select { width: 100%; border: 1px solid #cbd6e3; border-radius: 7px; padding: 9px 10px; background: white; }
+        button { border: 0; border-radius: 7px; background: #2463a6; color: white; padding: 9px 13px; cursor: pointer; } button.secondary { background: #e7eef7; color: #294a70; } button.danger { background: #fff0ed; color: #a83d2d; } button:disabled { opacity: .55; cursor: not-allowed; }
+        .actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; } .notice { display: none; padding: 10px 12px; margin-top: 12px; border-radius: 7px; } .notice.show { display: block; } .success { background: #e8f7ed; color: #25633a; } .error { background: #fff0ed; color: #a83d2d; }
+        .table-wrap { overflow-x: auto; } table { width: 100%; border-collapse: collapse; min-width: 650px; } th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e4eaf1; vertical-align: top; } th { color: #63738a; font-size: 13px; }
+        .empty { padding: 20px 5px; text-align: center; color: #65748b; } .badge { display: inline-block; background: #eef3f8; border-radius: 99px; padding: 4px 8px; font-size: 12px; }
+        @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } } @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+    </style>
+    <link rel="stylesheet" href="/navigation.css">
+    <link rel="stylesheet" href="/interfaz.css">
+</head>
+<body>
+    <header><div class="topbar">Apartamentos Blue</div><nav class="main-nav" aria-label="Navegación principal"><a href="/propiedades.html">Propiedades</a><a href="/clientes.html">Clientes</a><a href="/disponibilidad.html">Disponibilidad</a><a href="/reservas.html" aria-current="page">Reservas</a><a href="/pagos.html">Pagos</a><a href="/reportes.html">Reportes</a></nav></header>
+    <main>
+        <h1>Reservas y disponibilidad</h1><p class="intro">Reserva el inmueble completo o una habitación. La salida no se cuenta como noche.</p>
+        <div class="layout">
+            <section class="panel"><h2 id="reservationTitle">Nueva reserva</h2>
+                <form id="reservationForm"><div class="grid">
+                    <div class="field wide"><label for="tenant">Arrendatario *</label><select id="tenant" required><option value="">Cargando...</option></select></div>
+                    <div class="field wide"><label for="property">Propiedad *</label><select id="property" required><option value="">Cargando...</option></select></div>
+                    <div class="field wide"><label for="room">Habitación</label><select id="room"><option value="">Inmueble completo</option></select></div>
+                    <div class="field"><label for="start">Entrada *</label><input id="start" type="date" required></div>
+                    <div class="field"><label for="end">Salida *</label><input id="end" type="date" required></div>
+                    <div class="field"><label for="people">Personas *</label><input id="people" type="number" min="1" value="1" required></div>
+                </div><div class="actions"><button id="saveButton" type="submit">Consultar y reservar</button><button id="cancelEdit" type="button" class="secondary" hidden>Cancelar edición</button></div></form>
+                <div id="formNotice" class="notice" role="status" aria-live="polite"></div>
+            </section>
+            <section class="panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h2>Reservas registradas</h2><button id="refresh" class="secondary" type="button">Actualizar</button></div>
+                <div class="table-wrap"><table><thead><tr><th>Arrendatario</th><th>Propiedad / espacio</th><th>Fechas</th><th>Personas</th><th>Total</th><th>Estado y acciones</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="empty">Cargando...</td></tr></tbody></table></div>
+            </section>
+        </div>
+    </main>
+    <script>
+        let editingId = null;
+        const reservationForm = document.getElementById("reservationForm");
+        const tenantSelect = document.getElementById("tenant"), propertySelect = document.getElementById("property"), roomSelect = document.getElementById("room");
+        const formNotice = document.getElementById("formNotice"), rows = document.getElementById("rows");
+        function add(parent, tag, text) { const el = document.createElement(tag); el.textContent = text ?? ""; parent.appendChild(el); return el; }
+        async function request(url, options = {}) { const response = await fetch(url, options); const raw = await response.text(); let body = null; try { body = raw ? JSON.parse(raw) : null; } catch { body = raw; } if (!response.ok) throw new Error(body?.message || (typeof body === "string" ? body : `Error ${response.status}`)); return body; }
+        function show(message, kind = "success") { formNotice.textContent = message; formNotice.className = `notice show ${kind}`; }
+        function money(value) { return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value || 0)); }
+        function date(value) { return value ? new Date(`${value}T00:00:00`).toLocaleDateString("es-MX") : "—"; }
+        function setOptions(select, firstLabel, list, labelOf, idOf) { select.replaceChildren(new Option(firstLabel, "")); list.forEach(item => select.add(new Option(labelOf(item), idOf(item)))); }
+        async function loadSelects() {
+            try {
+                const [clients, properties] = await Promise.all([request("/api/clientes"), request("/api/propiedades")]);
+                const tenants = (clients || []).filter(person => person.tipo === "CLIENTE" && person.estatus === "ACTIVO");
+                setOptions(tenantSelect, tenants.length ? "Selecciona un arrendatario..." : "Registra un arrendatario primero", tenants, p => `${p.nombres} ${p.apellidos}`, p => p.id);
+                setOptions(propertySelect, properties?.length ? "Selecciona una propiedad..." : "Registra una propiedad primero", (properties || []).filter(p => p.estado === "DISPONIBLE"), p => `${p.titulo} · ID ${p.id_propiedad}`, p => p.id_propiedad);
+            } catch (error) { show(`No se pudieron cargar las listas: ${error.message}`, "error"); }
+        }
+        async function loadRooms() {
+            roomSelect.replaceChildren(new Option("Inmueble completo", ""));
+            if (!propertySelect.value) return;
+            try { const list = await request(`/api/propiedades/${propertySelect.value}/habitaciones`); (list || []).filter(room => room.estado === "DISPONIBLE").forEach(room => roomSelect.add(new Option(`${room.numero} · ${room.tipo_habitacion} · ${money(room.precio_noche)}/noche`, room.id_habitacion))); }
+            catch (error) { show(`No se pudieron cargar las habitaciones: ${error.message}`, "error"); }
+        }
+        function render(list) {
+            rows.replaceChildren();
+            if (!list?.length) { const tr = add(rows, "tr", ""); const td = add(tr, "td", "No hay reservas registradas."); td.colSpan = 6; td.className = "empty"; return; }
+            list.forEach(reservation => {
+                const tr = add(rows, "tr", ""); add(tr, "td", `${reservation.arrendatario?.nombres || ""} ${reservation.arrendatario?.apellidos || ""}`);
+                add(tr, "td", `${reservation.propiedad?.titulo || "Propiedad"} · ${reservation.habitacion ? "Habitación " + reservation.habitacion.numero : "Inmueble completo"}`);
+                add(tr, "td", `${date(reservation.fecha_inicio)} – ${date(reservation.fecha_fin)}`); add(tr, "td", reservation.num_personas); add(tr, "td", money(reservation.monto_total));
+                const cell = add(tr, "td", ""); const badge = add(cell, "span", reservation.estado); badge.className = "badge";
+                if (reservation.estado !== "CANCELADA") {
+                    const edit = add(cell, "button", "Editar"); edit.type = "button"; edit.className = "secondary";
+                    edit.addEventListener("click", async () => {
+                        editingId = reservation.id_reserva; tenantSelect.value = reservation.arrendatario.id;
+                        propertySelect.value = reservation.propiedad.id_propiedad; propertySelect.disabled = true;
+                        await loadRooms(); roomSelect.value = reservation.habitacion?.id_habitacion || "";
+                        document.getElementById("start").value = reservation.fecha_inicio;
+                        document.getElementById("end").value = reservation.fecha_fin;
+                        document.getElementById("people").value = reservation.num_personas;
+                        document.getElementById("reservationTitle").textContent = `Editar reserva ${editingId}`;
+                        document.getElementById("saveButton").textContent = "Guardar cambios";
+                        document.getElementById("cancelEdit").hidden = false; reservationForm.scrollIntoView({behavior:"smooth",block:"start"});
+                    });
+                    const actions = document.createElement("div"); actions.className = "actions"; cell.appendChild(actions);
+                    if (reservation.estado === "PENDIENTE") { const confirm = add(actions, "button", "Confirmar"); confirm.type = "button"; confirm.addEventListener("click", () => changeReservation(reservation.id_reserva, "confirmar")); }
+                    const cancel = add(actions, "button", "Cancelar"); cancel.type = "button"; cancel.className = "danger"; cancel.addEventListener("click", () => changeReservation(reservation.id_reserva, "cancelar"));
+                }
+            });
+        }
+        async function loadReservations() { rows.replaceChildren(); const tr = add(rows, "tr", ""); const td = add(tr, "td", "Cargando..."); td.colSpan = 6; td.className = "empty"; try { render(await request("/api/reservas")); } catch (error) { rows.replaceChildren(); const row = add(rows, "tr", ""); const cell = add(row, "td", `No se pudieron cargar: ${error.message}`); cell.colSpan = 6; cell.className = "empty"; } }
+        async function changeReservation(id, action) { try { await request(`/api/reservas/${id}/${action}`, { method: "PUT" }); await loadReservations(); show(action === "confirmar" ? "Reserva confirmada." : "Reserva cancelada; las fechas quedaron disponibles."); } catch (error) { show(error.message, "error"); } }
+        function resetEdit() {
+            editingId = null; reservationForm.reset(); propertySelect.disabled = false;
+            roomSelect.replaceChildren(new Option("Inmueble completo", ""));
+            document.getElementById("reservationTitle").textContent = "Nueva reserva";
+            document.getElementById("saveButton").textContent = "Consultar y reservar";
+            document.getElementById("cancelEdit").hidden = true;
+        }
+        document.getElementById("cancelEdit").addEventListener("click", resetEdit);
+        propertySelect.addEventListener("change", loadRooms);
+        document.getElementById("refresh").addEventListener("click", loadReservations);
+        document.getElementById("reservationForm").addEventListener("submit", async event => {
+            event.preventDefault(); const button = document.getElementById("saveButton"); button.disabled = true;
+            const propertyId = Number(propertySelect.value), roomId = roomSelect.value ? Number(roomSelect.value) : null;
+            const start = document.getElementById("start").value, end = document.getElementById("end").value;
+            try {
+                const wasEditing = editingId !== null;
+                const query = new URLSearchParams({ propiedadId: propertyId, fechaInicio: start, fechaFin: end }); if (roomId) query.set("habitacionId", roomId);
+                const availability = wasEditing ? {disponible:true} : await request(`/api/reservas/disponibilidad?${query}`);
+                if (!availability.disponible) { show("Ese espacio ya está reservado para algunas de esas fechas.", "error"); return; }
+                const body = { arrendatario: { id: Number(tenantSelect.value) }, propiedad: { id_propiedad: propertyId }, habitacion: roomId ? { id_habitacion: roomId } : null, fecha_inicio: start, fecha_fin: end, num_personas: Number(document.getElementById("people").value) };
+                const saved = await request(wasEditing ? `/api/reservas/${editingId}` : "/api/reservas", { method: wasEditing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                resetEdit();
+                await loadReservations(); show(`${wasEditing ? "Reserva actualizada" : "Reserva creada como pendiente"}. Total calculado: ${money(saved.monto_total)}.`);
+            } catch (error) { show(`No se pudo crear la reserva: ${error.message}`, "error"); }
+            finally { button.disabled = false; }
+        });
+        loadSelects(); loadReservations();
+    </script>
+</body>
+</html>
